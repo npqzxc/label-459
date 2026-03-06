@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: online-tool-platform
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+      file-size-threshold: 1MB
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.toolplatform: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 文件上传临时目录
+file:
+  upload:
+    temp-dir: /tmp/uploads
