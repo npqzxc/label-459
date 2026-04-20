@@ -29,6 +29,11 @@ const routes = [
     path: '/json-format',
     name: 'JsonFormat',
     component: () => import('../views/JsonFormat.vue')
+  },
+  {
+    path: '/timestamp',
+    name: 'TimestampConverter',
+    component: () => import('../views/TimestampConverter.vue')
   }
 ]
 

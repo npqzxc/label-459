@@ -56,6 +56,13 @@ export default {
           description: 'JSON格式化、压缩、语法校验工具',
           icon: 'el-icon-data-analysis',
           path: '/json-format'
+        },
+        {
+          id: 5,
+          name: '时间戳转换',
+          description: '时间戳与日期相互转换，支持秒级/毫秒级',
+          icon: 'el-icon-time',
+          path: '/timestamp'
         }
       ]
     }

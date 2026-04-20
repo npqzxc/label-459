@@ -34,3 +34,11 @@ export function processJson(data) {
     data
   })
 }
+
+export function processTimestamp(data) {
+  return request({
+    url: '/timestamp/process',
+    method: 'post',
+    data
+  })
+}
