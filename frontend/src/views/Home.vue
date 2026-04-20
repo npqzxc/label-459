@@ -49,6 +49,13 @@ export default {
           description: '支持Base64、MD5、AES等加解密算法',
           icon: 'el-icon-lock',
           path: '/crypto'
+        },
+        {
+          id: 4,
+          name: 'JSON格式化校验',
+          description: 'JSON格式化、压缩、语法校验工具',
+          icon: 'el-icon-data-analysis',
+          path: '/json-format'
         }
       ]
     }
