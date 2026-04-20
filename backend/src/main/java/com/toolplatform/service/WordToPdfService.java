@@ -1,8 +1,11 @@
 package com.toolplatform.service;
 
 import com.toolplatform.exception.BusinessException;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.docx4j.Docx4J;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,10 +16,12 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -59,38 +64,129 @@ public class WordToPdfService {
         }
 
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !originalFilename.endsWith(".docx")) {
-            throw new BusinessException("只支持 .docx 格式的Word文档");
+        if (originalFilename == null || !isSupportedWordFile(originalFilename)) {
+            throw new BusinessException("只支持 .doc 或 .docx 格式的Word文档");
         }
 
         String fileId = UUID.randomUUID().toString();
-        Path wordPath = Paths.get(tempDir, fileId + "_" + originalFilename);
+        Path uploadedWordPath = Paths.get(tempDir, fileId + "_" + originalFilename);
         String pdfFilename = fileId + ".pdf";
         Path pdfPath = Paths.get(tempDir, pdfFilename);
+        Path normalizedDocxPath = null;
 
         try {
             // 保存上传的Word文件
-            file.transferTo(wordPath.toFile());
-            logger.info("Word file saved: {}", wordPath);
+            file.transferTo(uploadedWordPath.toFile());
+            logger.info("Word file saved: {}", uploadedWordPath);
+
+            File sourceWordFile = uploadedWordPath.toFile();
+            if (isDocFile(originalFilename)) {
+                normalizedDocxPath = Paths.get(tempDir, fileId + "_normalized.docx");
+                convertDocToDocx(uploadedWordPath.toFile(), normalizedDocxPath.toFile());
+                logger.info("Converted .doc to .docx: {}", normalizedDocxPath);
+                sourceWordFile = normalizedDocxPath.toFile();
+            }
 
             // 使用 docx4j 转换为PDF
-            convertWordToPdfWithDocx4j(wordPath.toFile(), pdfPath.toFile());
+            convertWordToPdfWithDocx4j(sourceWordFile, pdfPath.toFile());
             logger.info("PDF file created: {}", pdfPath);
 
             // 清理Word文件
-            Files.deleteIfExists(wordPath);
+            cleanupTemporaryFiles(uploadedWordPath, normalizedDocxPath);
 
             return pdfFilename;
         } catch (Exception e) {
             logger.error("Failed to convert Word to PDF", e);
             // 清理临时文件
-            try {
-                Files.deleteIfExists(wordPath);
-                Files.deleteIfExists(pdfPath);
-            } catch (IOException cleanupException) {
-                logger.warn("Failed to cleanup temporary files", cleanupException);
-            }
+            cleanupTemporaryFiles(uploadedWordPath, normalizedDocxPath, pdfPath);
             throw new BusinessException("文件转换失败: " + e.getMessage());
+        }
+    }
+
+    private boolean isSupportedWordFile(String filename) {
+        String normalizedName = filename.toLowerCase(Locale.ROOT);
+        return normalizedName.endsWith(".doc") || normalizedName.endsWith(".docx");
+    }
+
+    private boolean isDocFile(String filename) {
+        return filename.toLowerCase(Locale.ROOT).endsWith(".doc");
+    }
+
+    private void convertDocToDocx(File docFile, File docxFile) throws Exception {
+        logger.info("Starting .doc normalization: {}", docFile.getName());
+
+        try (InputStream inputStream = Files.newInputStream(docFile.toPath());
+             HWPFDocument hwpfDocument = new HWPFDocument(inputStream);
+             WordExtractor extractor = new WordExtractor(hwpfDocument)) {
+
+            WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.createPackage();
+            MainDocumentPart documentPart = wordMLPackage.getMainDocumentPart();
+
+            boolean hasContent = false;
+            String[] paragraphs = extractor.getParagraphText();
+            if (paragraphs != null) {
+                for (String paragraph : paragraphs) {
+                    String normalizedParagraph = normalizeDocParagraph(paragraph);
+                    if (!normalizedParagraph.isEmpty()) {
+                        documentPart.addParagraphOfText(normalizedParagraph);
+                        hasContent = true;
+                    }
+                }
+            }
+
+            if (!hasContent) {
+                String fallbackText = normalizeDocText(extractor.getText());
+                if (!fallbackText.isEmpty()) {
+                    String[] lines = fallbackText.split("\\n");
+                    for (String line : lines) {
+                        documentPart.addParagraphOfText(line);
+                    }
+                    hasContent = true;
+                }
+            }
+
+            if (!hasContent) {
+                throw new BusinessException(".doc 文档内容为空或无法读取");
+            }
+
+            wordMLPackage.save(docxFile);
+        }
+    }
+
+    private String normalizeDocParagraph(String paragraph) {
+        if (paragraph == null) {
+            return "";
+        }
+        return paragraph
+                .replace("\u0007", "")
+                .replace("\u0000", "")
+                .replace("\r", "")
+                .replace("\n", "")
+                .trim();
+    }
+
+    private String normalizeDocText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text
+                .replace("\u0007", "")
+                .replace("\u0000", "")
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .trim();
+    }
+
+    private void cleanupTemporaryFiles(Path... paths) {
+        for (Path path : paths) {
+            if (path == null) {
+                continue;
+            }
+            try {
+                Files.deleteIfExists(path);
+            } catch (IOException e) {
+                logger.warn("Failed to cleanup temporary file: {}", path, e);
+            }
         }
     }
 

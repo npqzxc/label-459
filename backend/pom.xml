@@ -51,6 +51,11 @@
             <artifactId>docx4j-export-fo</artifactId>
             <version>${docx4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>5.2.3</version>
+        </dependency>
 
         <!-- Commons Codec for Base64 -->
         <dependency>
