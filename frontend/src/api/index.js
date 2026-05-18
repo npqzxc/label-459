@@ -26,3 +26,19 @@ export function processCrypto(data) {
     data
   })
 }
+
+export function processJson(data) {
+  return request({
+    url: '/json/process',
+    method: 'post',
+    data
+  })
+}
+
+export function processTimestamp(data) {
+  return request({
+    url: '/timestamp/process',
+    method: 'post',
+    data
+  })
+}

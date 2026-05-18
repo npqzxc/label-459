@@ -80,14 +80,15 @@ export default {
       this.$router.push('/')
     },
     beforeUpload(file) {
-      const isWord = file.name.endsWith('.doc') || file.name.endsWith('.docx')
-      const isLt10M = file.size / 1024 / 1024 < 10
+      const lowerName = file.name.toLowerCase()
+      const isWord = lowerName.endsWith('.doc') || lowerName.endsWith('.docx')
+      const isWithin10M = file.size / 1024 / 1024 <= 10
 
       if (!isWord) {
         this.$message.error('只支持 .doc 或 .docx 格式的文件')
         return false
       }
-      if (!isLt10M) {
+      if (!isWithin10M) {
         this.$message.error('文件大小不能超过 10MB')
         return false
       }

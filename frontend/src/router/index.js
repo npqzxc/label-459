@@ -24,6 +24,16 @@ const routes = [
     path: '/crypto',
     name: 'Crypto',
     component: () => import('../views/Crypto.vue')
+  },
+  {
+    path: '/json-format',
+    name: 'JsonFormat',
+    component: () => import('../views/JsonFormat.vue')
+  },
+  {
+    path: '/timestamp',
+    name: 'TimestampConverter',
+    component: () => import('../views/TimestampConverter.vue')
   }
 ]
 
